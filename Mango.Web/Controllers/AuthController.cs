@@ -46,7 +46,7 @@ namespace Mango.Web.Controllers
             }
             else
             {
-                ModelState.AddModelError("CustomError", responseDto.Message);
+                TempData["error"] = responseDto.Message;
                 return View(obj);
             }
         }
@@ -84,6 +84,10 @@ namespace Mango.Web.Controllers
                     return RedirectToAction(nameof(Login));
                 }
             }
+            else
+            {
+                TempData["error"] = result.Message;
+            }
 
             var roleList = new List<SelectListItem>()
             {
@@ -92,7 +96,6 @@ namespace Mango.Web.Controllers
             };
 
             ViewBag.RoleList = roleList;
-            TempData["error"] = result?.Message;
 
             return View(obj);
         }

@@ -1,6 +1,6 @@
-﻿namespace Mango.Services.RewardAPI.Message
+﻿namespace Mango.Services.RewardAPI.Models.Dto
 {
-    public class RewardsMessage
+    public class RewardsDto
     {
         public string UserId { get; set; }
         public int RewardsActivity { get; set; }

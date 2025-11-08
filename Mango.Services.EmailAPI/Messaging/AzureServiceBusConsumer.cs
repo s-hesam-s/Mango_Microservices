@@ -1,5 +1,4 @@
 ﻿using Azure.Messaging.ServiceBus;
-using Mango.Services.EmailAPI.Message;
 using Mango.Services.EmailAPI.Models.Dto;
 using Mango.Services.EmailAPI.Services;
 using Newtonsoft.Json;
@@ -110,7 +109,7 @@ namespace Mango.Services.EmailAPI.Messaging
             var message = args.Message;
             var body = Encoding.UTF8.GetString(message.Body);
 
-            RewardsMessage objMessage = JsonConvert.DeserializeObject<RewardsMessage>(body);
+            RewardsDto objMessage = JsonConvert.DeserializeObject<RewardsDto>(body);
             try
             {
                 //TODO - try to log email

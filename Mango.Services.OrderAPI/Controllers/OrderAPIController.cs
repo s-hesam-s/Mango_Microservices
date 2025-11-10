@@ -228,6 +228,7 @@ namespace Mango.Services.OrderAPI.Controllers
                         Refund refund = service.Create(options);
                     }
                     orderHeader.Status = newStatus;
+                    _db.SaveChanges();
                 }
             }
             catch (Exception ex)

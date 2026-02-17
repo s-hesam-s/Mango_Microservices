@@ -11,6 +11,8 @@ namespace Mango.Services.AuthAPI.RabbitMQSender
         private readonly string _username;
         private readonly string _password;
 
+        private IConnection? _connection;
+
         public RabbitMQAuthMessageSender()
         {
             _hostName = "localhost";
@@ -20,15 +22,9 @@ namespace Mango.Services.AuthAPI.RabbitMQSender
 
         public async Task SendMessageAsync(object message, string queueName)
         {
-            var factory = new ConnectionFactory
-            {
-                HostName = _hostName,
-                UserName = _username,
-                Password = _password
-            };
+            await EnsureConnectionAsync();
 
-            await using var connection = await factory.CreateConnectionAsync();
-            await using var channel = await connection.CreateChannelAsync();
+            await using var channel = await _connection!.CreateChannelAsync();
 
             await channel.QueueDeclareAsync(
                 queue: queueName,
@@ -44,6 +40,21 @@ namespace Mango.Services.AuthAPI.RabbitMQSender
                 exchange: "",
                 routingKey: queueName,
                 body: body);
+        }
+
+        private async Task EnsureConnectionAsync()
+        {
+            if (_connection != null && _connection.IsOpen)
+                return;
+
+            var factory = new ConnectionFactory
+            {
+                HostName = _hostName,
+                UserName = _username,
+                Password = _password
+            };
+
+            _connection = await factory.CreateConnectionAsync();
         }
     }
 }

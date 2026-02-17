@@ -76,7 +76,7 @@ namespace Mango.Services.EmailAPI.Messaging
 
         private async Task HandleMessage(string email)
         {
-            // Your email logic here
+            await _emailService.RegisterUserEmailAndLog(email);
         }
 
         public override async Task StopAsync(CancellationToken cancellationToken)

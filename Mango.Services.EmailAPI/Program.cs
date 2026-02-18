@@ -24,6 +24,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<RabbitMQAuthConsumer>();
 builder.Services.AddHostedService<RabbitMQCartConsumer>();
+builder.Services.AddHostedService<RabbitMQOrderConsumer>();
 
 var app = builder.Build();
 

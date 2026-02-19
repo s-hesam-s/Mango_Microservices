@@ -16,7 +16,9 @@ namespace Mango.Services.EmailAPI.Messaging
         private IConnection? _connection;
         private IChannel? _channel;
 
-        string queueName = "";
+        private const string OrderCreated_EmailUpdateQueue = "EmailUpdateQueue";
+
+        //string queueName = "";
 
         public RabbitMQOrderConsumer(
             IConfiguration configuration,
@@ -42,29 +44,51 @@ namespace Mango.Services.EmailAPI.Messaging
 
             string exchangeName = _configuration.GetValue<string>("TopicAndQueueNames:OrderCreatedTopic");
 
+            //await _channel.ExchangeDeclareAsync(
+            //    exchange: exchangeName,
+            //    type: ExchangeType.Fanout,
+            //    durable: false,
+            //    autoDelete: false,
+            //    arguments: null,
+            //    cancellationToken: stoppingToken);
+
             await _channel.ExchangeDeclareAsync(
                 exchange: exchangeName,
-                type: ExchangeType.Fanout,
+                type: ExchangeType.Direct,
                 durable: false,
                 autoDelete: false,
                 arguments: null,
                 cancellationToken: stoppingToken);
 
-            //Declare temporary queue (server-generated name)
-            var queueDeclareResult = await _channel.QueueDeclareAsync(
-                queue: "",
+            ////Declare temporary queue (server-generated name)
+            //var queueDeclareResult = await _channel.QueueDeclareAsync(
+            //    queue: "",
+            //    durable: false,
+            //    exclusive: true,
+            //    autoDelete: true,
+            //    arguments: null,
+            //    cancellationToken: stoppingToken);
+
+            //queueName = queueDeclareResult.QueueName;
+
+            await _channel.QueueDeclareAsync(
+                queue: OrderCreated_EmailUpdateQueue,
                 durable: false,
-                exclusive: true,
-                autoDelete: true,
+                exclusive: false,
+                autoDelete: false,
                 arguments: null,
                 cancellationToken: stoppingToken);
 
-            queueName = queueDeclareResult.QueueName;
+            //await _channel.QueueBindAsync(
+            //        queue: queueName,
+            //        exchange: exchangeName,
+            //        routingKey: "",
+            //        cancellationToken: stoppingToken);
 
             await _channel.QueueBindAsync(
-                    queue: queueName,
+                    queue: OrderCreated_EmailUpdateQueue,
                     exchange: exchangeName,
-                    routingKey: "",
+                    routingKey: "EmailUpdate",
                     cancellationToken: stoppingToken);
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
@@ -97,8 +121,14 @@ namespace Mango.Services.EmailAPI.Messaging
                 }
             };
 
+            //await _channel.BasicConsumeAsync(
+            //    queue: queueName,
+            //    autoAck: false,
+            //    consumer: consumer,
+            //    cancellationToken: stoppingToken);
+
             await _channel.BasicConsumeAsync(
-                queue: queueName,
+                queue: OrderCreated_EmailUpdateQueue,
                 autoAck: false,
                 consumer: consumer,
                 cancellationToken: stoppingToken);

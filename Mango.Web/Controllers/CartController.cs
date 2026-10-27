@@ -9,6 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace Mango.Web.Controllers
 {
+    [Authorize]
     public class CartController : Controller
     {
         private readonly ICartService _cartService;

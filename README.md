@@ -86,6 +86,8 @@ The authorization tests use mocked dependencies, with in-memory HTTP checks wher
 
 The regression suite includes in-memory HTTP authorization checks and the MVC registration flow. It does not validate a live payment or Service Bus deployment.
 
+Cart operations use the authenticated subject. Order reads allow the owner or an administrator; checkout/payment operations remain owner-only, and operational status changes require ADMIN. See the [Cart and Order access policy](SECURITY-SETUP.md#cart-and-order-access-policy) for identity binding, HTTP errors and test boundaries.
+
 ## Project scope and reuse
 
 This is an educational repository. The implementation notes describe the code in this repository; they do not claim a deployed commercial service or measured production results. Third-party libraries and assets retain their own terms. No project-wide license is currently declared.

@@ -14,10 +14,13 @@
     </PackageReference>
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Mango.Services.AuthAPI/Mango.Services.AuthAPI.csproj" />
     <ProjectReference Include="../../Mango.Web/Mango.Web.csproj" />
+    <ProjectReference Include="../../Mango.Services.ShoppingCartAPI/Mango.Services.ShoppingCartAPI.csproj" />
+    <ProjectReference Include="../../Mango.Services.OrderAPI/Mango.Services.OrderAPI.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>

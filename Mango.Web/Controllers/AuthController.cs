@@ -56,7 +56,6 @@ namespace Mango.Web.Controllers
         {
             var roleList = new List<SelectListItem>()
             {
-                new SelectListItem{Text=SD.RoleAdmin,Value=SD.RoleAdmin},
                 new SelectListItem{Text=SD.RoleCustomer,Value=SD.RoleCustomer},
             };
 
@@ -69,20 +68,11 @@ namespace Mango.Web.Controllers
         public async Task<IActionResult> Register(RegistrationRequestDto obj)
         {
             ResponseDto result = await _authService.RegisterAsync(obj);
-            ResponseDto assingRole;
 
             if (result != null && result.IsSuccess)
             {
-                if (string.IsNullOrEmpty(obj.Role))
-                {
-                    obj.Role = SD.RoleCustomer;
-                }
-                assingRole = await _authService.AssignRoleAsync(obj);
-                if (assingRole != null && assingRole.IsSuccess)
-                {
-                    TempData["success"] = "Registration Successful";
-                    return RedirectToAction(nameof(Login));
-                }
+                TempData["success"] = "Registration Successful";
+                return RedirectToAction(nameof(Login));
             }
             else
             {
@@ -91,7 +81,6 @@ namespace Mango.Web.Controllers
 
             var roleList = new List<SelectListItem>()
             {
-                new SelectListItem{Text=SD.RoleAdmin,Value=SD.RoleAdmin},
                 new SelectListItem{Text=SD.RoleCustomer,Value=SD.RoleCustomer},
             };
 

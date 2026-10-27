@@ -24,18 +24,25 @@ namespace Mango.Services.AuthAPI.Service
 
         public async Task<bool> AssignRole(string email, string roleName)
         {
-            var user = _db.ApplicationUsers.FirstOrDefault(u => u.Email.ToLower() == email.ToLower());
-            if (user != null)
+            var normalizedRole = roleName?.Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(email) || (normalizedRole != "ADMIN" && normalizedRole != "CUSTOMER"))
             {
-                if (!_roleManager.RoleExistsAsync(roleName).GetAwaiter().GetResult())
-                {
-                    //create role if it does not exist
-                    _roleManager.CreateAsync(new IdentityRole(roleName)).GetAwaiter().GetResult();
-                }
-                await _userManager.AddToRoleAsync(user, roleName);
-                return true;
+                return false;
             }
-            return false;
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return false;
+            }
+            if (!await _roleManager.RoleExistsAsync(normalizedRole))
+            {
+                var roleResult = await _roleManager.CreateAsync(new IdentityRole(normalizedRole));
+                if (!roleResult.Succeeded)
+                {
+                    return false;
+                }
+            }
+            return (await _userManager.AddToRoleAsync(user, normalizedRole)).Succeeded;
         }
 
         public async Task<LoginResponseDto> Login(LoginRequestDto loginRequestDto)
@@ -86,16 +93,22 @@ namespace Mango.Services.AuthAPI.Service
                 var result = await _userManager.CreateAsync(user, registrationRequestDto.Password);
                 if (result.Succeeded)
                 {
-                    var userToReturn = _db.ApplicationUsers.First(u => u.UserName == registrationRequestDto.Email);
-
-                    UserDto userDto = new()
+                    const string customerRole = "CUSTOMER";
+                    if (!await _roleManager.RoleExistsAsync(customerRole))
                     {
-                        Email = userToReturn.Email,
-                        ID = userToReturn.Id,
-                        Name = userToReturn.Name,
-                        PhoneNumber = userToReturn.PhoneNumber
-                    };
-
+                        var roleResult = await _roleManager.CreateAsync(new IdentityRole(customerRole));
+                        if (!roleResult.Succeeded)
+                        {
+                            await _userManager.DeleteAsync(user);
+                            return "Unable to create the customer role.";
+                        }
+                    }
+                    var assignmentResult = await _userManager.AddToRoleAsync(user, customerRole);
+                    if (!assignmentResult.Succeeded)
+                    {
+                        await _userManager.DeleteAsync(user);
+                        return "Unable to assign the customer role.";
+                    }
                     return "";
                 }
                 else

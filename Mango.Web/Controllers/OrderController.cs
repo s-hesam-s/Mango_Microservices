@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace Mango.Web.Controllers
 {
+    [Authorize]
     public class OrderController : Controller
     {
         private readonly IOrderService _orderService;
@@ -42,6 +43,7 @@ namespace Mango.Web.Controllers
         }
 
         [HttpPost("OrderReadyForPickup")]
+        [Authorize(Roles = SD.RoleAdmin)]
         public async Task<IActionResult> OrderReadyForPickup(int orderId)
         {
             var response = await _orderService.UpdateOrderStatus(orderId, SD.Status_ReadyForPickup);
@@ -54,6 +56,7 @@ namespace Mango.Web.Controllers
         }
 
         [HttpPost("CompleteOrder")]
+        [Authorize(Roles = SD.RoleAdmin)]
         public async Task<IActionResult> CompleteOrder(int orderId)
         {
             var response = await _orderService.UpdateOrderStatus(orderId, SD.Status_Completed);
@@ -66,6 +69,7 @@ namespace Mango.Web.Controllers
         }
 
         [HttpPost("CancelOrder")]
+        [Authorize(Roles = SD.RoleAdmin)]
         public async Task<IActionResult> CancelOrder(int orderId)
         {
             var response = await _orderService.UpdateOrderStatus(orderId, SD.Status_Cancelled);

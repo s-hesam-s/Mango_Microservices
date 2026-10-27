@@ -11,11 +11,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
+using System.Security.Claims;
 
 namespace Mango.Services.OrderAPI.Controllers
 {
     [Route("api/order")]
     [ApiController]
+    [Authorize]
     public class OrderAPIController : ControllerBase
     {
         protected ResponseDto _response;
@@ -37,8 +39,11 @@ namespace Mango.Services.OrderAPI.Controllers
 
         [Authorize]
         [HttpGet("GetOrders")]
-        public ResponseDto? Get(string? userId = "")
+        public ActionResult<ResponseDto> Get(string? userId = "")
         {
+            var currentUserId = getUserId();
+            if (currentUserId == null) return Forbid();
+            if (!User.IsInRole(SD.RoleAdmin) && !string.IsNullOrEmpty(userId) && userId != currentUserId) return Forbid();
             try
             {
                 IEnumerable<OrderHeader> objList;
@@ -48,7 +53,7 @@ namespace Mango.Services.OrderAPI.Controllers
                 }
                 else
                 {
-                    objList = _db.OrderHeaders.Include(u => u.OrderDetails).Where(u => u.UserId == userId).OrderByDescending(u => u.OrderHeaderId).ToList();
+                    objList = _db.OrderHeaders.Include(u => u.OrderDetails).Where(u => u.UserId == currentUserId).OrderByDescending(u => u.OrderHeaderId).ToList();
                 }
                 _response.Result = _mapper.Map<IEnumerable<OrderHeaderDto>>(objList);
             }
@@ -62,11 +67,15 @@ namespace Mango.Services.OrderAPI.Controllers
 
         [Authorize]
         [HttpGet("GetOrder/{id:int}")]
-        public ResponseDto? Get(int id)
+        public ActionResult<ResponseDto> Get(int id)
         {
+            var currentUserId = getUserId();
+            if (currentUserId == null) return Forbid();
             try
             {
-                OrderHeader orderHeader = _db.OrderHeaders.Include(u => u.OrderDetails).First(u => u.OrderHeaderId == id);
+                OrderHeader? orderHeader = _db.OrderHeaders.Include(u => u.OrderDetails).FirstOrDefault(u => u.OrderHeaderId == id);
+                if (orderHeader == null) return NotFound();
+                if (!User.IsInRole(SD.RoleAdmin) && orderHeader.UserId != currentUserId) return Forbid();
                 _response.Result = _mapper.Map<OrderHeaderDto>(orderHeader);
             }
             catch (Exception ex)
@@ -79,8 +88,13 @@ namespace Mango.Services.OrderAPI.Controllers
 
         [Authorize]
         [HttpPost("CreateOrder")]
-        public async Task<ResponseDto> CreateOrder([FromBody] CartDto cartDto)
+        public async Task<ActionResult<ResponseDto>> CreateOrder([FromBody] CartDto cartDto)
         {
+            var currentUserId = getUserId();
+            if (currentUserId == null) return Forbid();
+            if (cartDto?.CartHeader == null || cartDto.CartDetails == null) return BadRequest();
+            if (!string.IsNullOrEmpty(cartDto.CartHeader.UserId) && cartDto.CartHeader.UserId != currentUserId) return Forbid();
+            cartDto.CartHeader.UserId = currentUserId;
             try
             {
                 OrderHeaderDto orderHeaderDto = _mapper.Map<OrderHeaderDto>(cartDto.CartHeader);
@@ -105,10 +119,17 @@ namespace Mango.Services.OrderAPI.Controllers
 
         [Authorize]
         [HttpPost("CreateStripeSession")]
-        public async Task<ResponseDto> CreateStripeSession([FromBody] StripeRequestDto stripeRequestDto)
+        public async Task<ActionResult<ResponseDto>> CreateStripeSession([FromBody] StripeRequestDto stripeRequestDto)
         {
+            var currentUserId = getUserId();
+            if (currentUserId == null) return Forbid();
+            if (stripeRequestDto?.OrderHeader == null) return BadRequest();
             try
             {
+                OrderHeader? orderHeader = await _db.OrderHeaders.FirstOrDefaultAsync(u => u.OrderHeaderId == stripeRequestDto.OrderHeader.OrderHeaderId);
+                if (orderHeader == null) return NotFound();
+                if (orderHeader.UserId != currentUserId) return Forbid();
+                stripeRequestDto.OrderHeader.UserId = currentUserId;
                 var options = new SessionCreateOptions
                 {
                     SuccessUrl = stripeRequestDto.ApprovedUrl,
@@ -152,7 +173,6 @@ namespace Mango.Services.OrderAPI.Controllers
                 var service = new SessionService();
                 Session session = service.Create(options);
                 stripeRequestDto.StripeSessionUrl = session.Url;
-                OrderHeader orderHeader = _db.OrderHeaders.First(u => u.OrderHeaderId == stripeRequestDto.OrderHeader.OrderHeaderId);
                 orderHeader.StripeSessionId = session.Id;
                 _db.SaveChanges();
                 _response.Result = stripeRequestDto;
@@ -168,11 +188,15 @@ namespace Mango.Services.OrderAPI.Controllers
 
         [Authorize]
         [HttpPost("ValidateStripeSession")]
-        public async Task<ResponseDto> ValidateStripeSession([FromBody] int orderHeaderId)
+        public async Task<ActionResult<ResponseDto>> ValidateStripeSession([FromBody] int orderHeaderId)
         {
+            var currentUserId = getUserId();
+            if (currentUserId == null) return Forbid();
             try
             {
-                OrderHeader orderHeader = _db.OrderHeaders.First(u => u.OrderHeaderId == orderHeaderId);
+                OrderHeader? orderHeader = await _db.OrderHeaders.FirstOrDefaultAsync(u => u.OrderHeaderId == orderHeaderId);
+                if (orderHeader == null) return NotFound();
+                if (orderHeader.UserId != currentUserId) return Forbid();
 
                 var service = new SessionService();
                 Session session = service.Get(orderHeader.StripeSessionId);
@@ -207,13 +231,16 @@ namespace Mango.Services.OrderAPI.Controllers
             return _response;
         }
 
-        [Authorize]
+        [Authorize(Roles = SD.RoleAdmin)]
         [HttpPost("UpdateOrderStatus/{orderId:int}")]
-        public async Task<ResponseDto> UpdateOrderStatus(int orderId, [FromBody] string newStatus)
+        public async Task<ActionResult<ResponseDto>> UpdateOrderStatus(int orderId, [FromBody] string newStatus)
         {
+            if (getUserId() == null) return Forbid();
+            if (newStatus != SD.Status_ReadyForPickup && newStatus != SD.Status_Completed && newStatus != SD.Status_Cancelled) return BadRequest();
             try
             {
-                OrderHeader orderHeader = _db.OrderHeaders.First(u => u.OrderHeaderId == orderId);
+                OrderHeader? orderHeader = await _db.OrderHeaders.FirstOrDefaultAsync(u => u.OrderHeaderId == orderId);
+                if (orderHeader == null) return NotFound();
                 if (orderHeader != null)
                 {
                     if (newStatus == SD.Status_Cancelled)
@@ -237,6 +264,12 @@ namespace Mango.Services.OrderAPI.Controllers
                 _response.IsSuccess = false;
             }
             return _response;
+        }
+
+        private string? getUserId()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            return string.IsNullOrWhiteSpace(userId) ? null : userId;
         }
     }
 }

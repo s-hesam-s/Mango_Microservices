@@ -53,4 +53,24 @@ Run `dotnet test tests/Authorization.Tests/Authorization.Tests.csproj`. The test
 
 Run `pwsh -File scripts/Test-PublicConfiguration.ps1` to check public configuration without displaying values.
 
+## Cart and Order access policy
+
+Both API controllers require bearer authentication. The subject is read from the mapped NameIdentifier claim or raw `sub`; an authenticated identity without a usable subject is rejected.
+
+| Operation | Access |
+|---|---|
+| Read/update/remove/email a cart | The authenticated cart owner; ADMIN does not impersonate another cart owner |
+| List/read orders | Owner reads their own orders; ADMIN can read all orders |
+| Create an order | The authenticated owner; an omitted payload UserId is bound to the subject, and a different UserId is rejected |
+| Create/validate a Stripe session | The stored order owner, checked before any Stripe call; ADMIN has no payment impersonation override |
+| Update order status | ADMIN only; accepted operational targets are ReadyForPickup, Completed and Cancelled |
+
+Customer-supplied cart/header/detail keys do not determine ownership. Cart creation uses server-generated keys, and upsert discards nested cart-header navigation data. Existing cart resources are checked against the stored owner before removal, coupon changes or email publication. Order reads and payment guards use the persisted order owner rather than a payload owner.
+
+Successful responses retain the ResponseDto JSON envelope and existing route names. HTTP errors are 401 for unauthenticated callers, 403 for wrong ownership/role or missing subject, 404 for missing resources and 400 for invalid payloads or unsupported operational statuses. The MVC Cart and Order controllers also require sign-in, and their status actions require ADMIN, matching the existing order-detail UI.
+
+The authorization regression suite hosts controllers in TestServer with separate EF Core in-memory stores. It checks anonymous callers, missing subjects, mapped/raw subject claims, owners, other customers, administrators, forged record keys and nested navigation data. Database state and message publication are asserted, and a strict mocked Stripe client prevents real payment requests if an authorization regression occurs. The real application Program, SQL migration/seed routines, Stripe and Service Bus are not started by these tests. The additional in-memory provider is test-only and matches the existing EF Core 9.0.4 dependency.
+
+This change enforces caller identity and access. Existing pricing and payment workflow semantics remain outside these regressions; live Stripe/refund interoperability is not established by a passing authorization suite.
+
 The Auth, Order and ShoppingCart applications also publish messages through Mango.MessageBus. Each host reads ServiceBusConnectionString from its own configuration (environment variable: ServiceBusConnectionString). No connection string is embedded in the shared library.

@@ -86,6 +86,8 @@ The authorization tests use mocked dependencies, with in-memory HTTP checks wher
 
 The regression suite includes in-memory HTTP authorization checks and the MVC registration flow. It does not validate a live payment or Service Bus deployment.
 
+Cart/order regressions also cover server-side pricing, coupon boundaries, positive quantities, order status transitions, sequential payment confirmation retries, mocked Stripe failures and MVC checkout failures. Order API now includes a sample Coupon API address; override `ServiceUrls__CouponAPI` for your deployment as needed. See [Cart pricing and order workflow](SECURITY-SETUP.md#cart-pricing-and-order-workflow) for the supported state transitions, payment/reward reconciliation limits and zero-total order limitation.
+
 Cart operations use the authenticated subject. Order reads allow the owner or an administrator; checkout/payment operations remain owner-only, and operational status changes require ADMIN. See the [Cart and Order access policy](SECURITY-SETUP.md#cart-and-order-access-policy) for identity binding, HTTP errors and test boundaries.
 
 ## Project scope and reuse

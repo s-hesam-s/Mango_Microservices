@@ -302,6 +302,12 @@ public class CartOrderAuthorizationTests : IDisposable
     {
         var products = new Mock<CartProductService>();
         products.Setup(p => p.GetProducts()).ReturnsAsync(new[] { new CartProduct { ProductId = 1, Name = "Fixture", Price = 12 } });
+        var orderProducts = new Mock<OrderProductService>();
+        orderProducts.Setup(p => p.GetProducts()).ReturnsAsync(new[] {
+            new Mango.Services.OrderAPI.Models.Dto.ProductDto { ProductId = 1, Name = "Fixture", Price = 12 } });
+        var orderCoupons = new Mock<Mango.Services.OrderAPI.Service.IService.ICouponService>();
+        orderCoupons.Setup(c => c.GetCoupon("TEST")).ReturnsAsync(
+            new Mango.Services.OrderAPI.Models.Dto.CouponDto { CouponCode = "TEST", DiscountAmount = 0 });
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>
             { ["TopicAndQueueNames:EmailShoppingCartQueue"] = "email-cart-test" }).Build();
         return new TestServer(new WebHostBuilder().ConfigureServices(services =>
@@ -311,8 +317,9 @@ public class CartOrderAuthorizationTests : IDisposable
             services.AddTransient(_ => new CartAPIController(_cart,
                 Mango.Services.ShoppingCartAPI.MappingConfig.RegisterMaps().CreateMapper(), products.Object,
                 new Mock<CouponService>().Object, _bus.Object, config));
-            services.AddTransient(_ => new OrderAPIController(_orders, new Mock<OrderProductService>().Object,
-                Mango.Services.OrderAPI.MappingConfig.RegisterMaps().CreateMapper(), config, _bus.Object));
+            services.AddTransient(_ => new OrderAPIController(_orders, orderProducts.Object,
+                Mango.Services.OrderAPI.MappingConfig.RegisterMaps().CreateMapper(), config, _bus.Object,
+                orderCoupons.Object));
             services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Bearer", _ => { });
             services.AddAuthorization();
         }).Configure(app =>

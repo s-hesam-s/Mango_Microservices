@@ -1,5 +1,6 @@
-﻿@model CartDto
+@model CartDto
 
+<div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
 <form method="post">
     <input asp-for="CartHeader.UserId" hidden />
     <input asp-for="CartHeader.CartHeaderId" hidden />

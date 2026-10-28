@@ -1,4 +1,4 @@
-using IdentityModel;
+using System.IdentityModel.Tokens.Jwt;
 using Mango.Web.Models;
 using Mango.Web.Service;
 using Mango.Web.Service.IService;
@@ -66,7 +66,7 @@ namespace Mango.Web.Controllers
             {
                 CartHeader = new CartHeaderDto
                 {
-                    UserId = User.Claims.Where(u => u.Type == JwtClaimTypes.Subject)?.FirstOrDefault()?.Value
+                    UserId = User.Claims.Where(u => u.Type == JwtRegisteredClaimNames.Sub)?.FirstOrDefault()?.Value
                 }
             };
 

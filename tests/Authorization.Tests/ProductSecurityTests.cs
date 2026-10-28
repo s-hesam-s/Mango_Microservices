@@ -72,7 +72,7 @@ public class ProductSecurityTests : IDisposable
     [Fact]
     public void EditingWithoutUploadIgnoresThePostedStoragePath()
     {
-        var controller = new ProductAPIController(db, MappingConfig.RegisterMaps().CreateMapper())
+        var controller = new ProductAPIController(db, new MappingConfig())
         { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
         var response = controller.Put(new ProductDto { ProductId = 1, Name = "Changed", Price = 25,
             Description = "Text", CategoryName = "Category", ImageLocalPath = "../../outside.png", ImageUrl = "https://other.example.invalid/" });
@@ -86,7 +86,7 @@ public class ProductSecurityTests : IDisposable
     private TestServer createServer() => new(new WebHostBuilder().ConfigureServices(services =>
     {
         services.AddSingleton(db);
-        services.AddSingleton(MappingConfig.RegisterMaps().CreateMapper());
+        services.AddSingleton(new MappingConfig());
         services.AddControllers().AddApplicationPart(typeof(ProductAPIController).Assembly);
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, ProductBearerHandler>("Test", _ => { });
         services.AddAuthorization();

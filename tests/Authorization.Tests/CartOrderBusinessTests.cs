@@ -1,6 +1,5 @@
 using System.Net.Http;
 using System.Security.Claims;
-using AutoMapper;
 using Mango.MessageBus;
 using Mango.Services.OrderAPI.Controllers;
 using Mango.Services.OrderAPI.Models;
@@ -360,9 +359,9 @@ public class CartOrderBusinessTests : IDisposable
         CartDetails = new[] { new OrderDtos.CartDetailsDto { ProductId = 1, Count = 2, Product = new() { ProductId = 1, Name = "Forged", Price = 0.01 } } } };
     private static OrderDtos.StripeRequestDto stripeInput() => new() { ApprovedUrl = "https://example.invalid/success", CancelUrl = "https://example.invalid/cancel",
         OrderHeader = new() { OrderHeaderId = 100, UserId = "alice", OrderTotal = 0.01, Discount = 0, OrderDetails = Array.Empty<OrderDtos.OrderDetailsDto>() } };
-    private CartController cart() => new(_cart, Mango.Services.ShoppingCartAPI.MappingConfig.RegisterMaps().CreateMapper(), _cartProducts.Object, _cartCoupons.Object, _bus.Object, _config)
+    private CartController cart() => new(_cart, new Mango.Services.ShoppingCartAPI.MappingConfig(), _cartProducts.Object, _cartCoupons.Object, _bus.Object, _config)
         { ControllerContext = context() };
-    private OrderAPIController order() => new(_db, _products.Object, Mango.Services.OrderAPI.MappingConfig.RegisterMaps().CreateMapper(), _config, _bus.Object, _coupons.Object)
+    private OrderAPIController order() => new(_db, _products.Object, new Mango.Services.OrderAPI.MappingConfig(), _config, _bus.Object, _coupons.Object)
         { ControllerContext = context() };
     private static ControllerContext context() => new() { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] {
         new Claim(ClaimTypes.NameIdentifier, "alice"), new Claim(ClaimTypes.Role, "ADMIN") }, "test")) } };

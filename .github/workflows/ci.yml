@@ -29,7 +29,7 @@ jobs:
       - name: Set up .NET SDKs
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
       - name: Check tracked public configuration
         shell: pwsh
         run: ./scripts/Test-PublicConfiguration.ps1
@@ -41,3 +41,6 @@ jobs:
         run: dotnet restore tests/Authorization.Tests/Authorization.Tests.csproj
       - name: Run authorization regressions
         run: dotnet test tests/Authorization.Tests/Authorization.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+
+      - name: Build read-only fixture preview
+        run: dotnet build tools/Preview/Preview.csproj --configuration Release

@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
@@ -78,8 +77,6 @@ public class RegistrationSecurityTests
 
     private static AuthService createService(Mock<UserManager<ApplicationUser>> users, Mock<RoleManager<IdentityRole>> roles)
     {
-        var mapper = new Mock<IMapper>();
-        mapper.Setup(m => m.Map<UserDto>(It.IsAny<object>())).Returns(new UserDto());
         var configuration = new ConfigurationBuilder().Build();
         return new AuthService(null, null, users.Object, roles.Object);
     }

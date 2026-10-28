@@ -2,6 +2,12 @@
 
 An educational .NET microservices application for an e-commerce workflow, combining authentication, products, coupons, carts, orders and asynchronous notifications.
 
+## Visual preview
+
+![Read-only fixture preview with sample data](docs/screenshots/fixture-preview.png)
+
+[Run the read-only preview](docs/PREVIEW.md) to inspect the existing Razor views with sample data. It requires no database or payment credentials.
+
 ## Implementation highlights
 
 - Separately hosted ASP.NET Core services and an MVC client.
@@ -32,7 +38,7 @@ Follow the [source-backed walkthrough](docs/WALKTHROUGH.md) for isolated regress
 
 ## Requirements and configuration
 
-Use an SDK capable of targeting .NET 8, isolated SQL Server development databases and your own Azure Service Bus development namespace for messaging workflows. Stripe-dependent payment operations require separate development credentials. Package restore requires NuGet access.
+Use an SDK capable of targeting .NET 10, isolated SQL Server development databases and your own Azure Service Bus development namespace for messaging workflows. Stripe-dependent payment operations require separate development credentials. Package restore requires NuGet access.
 
 Read [SECURITY-SETUP.md](SECURITY-SETUP.md) before configuring credentials. Tracked secret values are intentionally empty. Use environment variables for your own development resources; do not restore old values from Git history.
 
@@ -100,10 +106,16 @@ This is an educational repository. The implementation notes describe the code in
 
 ## Continuous integration
 
-GitHub Actions restores and builds `Mango.sln` in Release mode on Windows using the existing .NET 8 target. It also runs `scripts/Test-PublicConfiguration.ps1` without printing configured values. The existing authorization regressions run with mocked dependencies and in-memory HTTP hosts where applicable. The application hosts, database migrations/seeds, cloud integrations and payments are not started by CI.
+GitHub Actions restores and builds `Mango.sln` in Release mode on Windows using the .NET 10 target. It also runs `scripts/Test-PublicConfiguration.ps1` without printing configured values. The existing authorization regressions run with mocked dependencies and in-memory HTTP hosts where applicable. The application hosts, database migrations/seeds, cloud integrations and payments are not started by CI.
 
 The [CI workflow](.github/workflows/ci.yml) runs for pull requests and pushes to `master`, and can be started manually. It uses read-only repository permissions and does not deploy the project.
 
 ## Security and regression boundaries
 
 See [implemented controls and verification limits](docs/SECURITY-BOUNDARIES.md) for browser, input and payment/token boundaries. Passing isolated tests does not certify deployed integration or production readiness.
+
+## Runtime maintenance
+
+See [runtime, dependency audit and migration notes](docs/RUNTIME.md) for the .NET 10 target and verification boundaries.
+
+[Local verification snapshot](docs/VERIFICATION.md) records the build, isolated-test and dependency-audit boundaries.

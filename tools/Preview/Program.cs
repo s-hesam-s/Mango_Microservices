@@ -21,7 +21,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 });
 builder.Configuration.Sources.Clear();
 builder.Configuration.AddInMemoryCollection();
-builder.WebHost.UseUrls("http://127.0.0.1:8812");
+builder.WebHost.UseUrls(args.Contains("--capture") ? "http://127.0.0.1:8822" : "http://127.0.0.1:8812");
 builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllersWithViews().AddApplicationPart(webAssembly)
@@ -45,7 +45,7 @@ app.Use(async (context, next) => {
         buffer.Position = 0;
         if (context.Response.ContentType?.StartsWith("text/html") == true) {
             var html = await new StreamReader(buffer).ReadToEndAsync();
-            const string banner = "<aside style='padding:14px 24px;background:#173641;color:#fff;font:15px system-ui;text-align:center'>READ-ONLY FIXTURE PREVIEW · Sample data · No database, payments or external APIs. Navigation and forms are inactive.</aside>";
+            const string banner = "<aside style='padding:14px 24px;background:#173641;color:#fff;font:15px system-ui;text-align:center'>READ-ONLY FIXTURE PREVIEW · Sample catalog and details · No database, payments or external APIs. Forms and other navigation are inactive.</aside>";
             html = html.Replace("<body>", "<body>" + banner);
             context.Response.Body = original;
             await context.Response.WriteAsync(html);
@@ -61,11 +61,21 @@ app.Run();
 
 public sealed class PreviewController : Controller
 {
-    public IActionResult Index() => View("~/Views/Home/Index.cshtml", new[] {
+    [HttpGet]
+    public IActionResult Index() => View("~/Views/Home/Index.cshtml", fixtureProducts());
+
+    [HttpGet]
+    public IActionResult ProductDetails(int productId)
+    {
+        var product = fixtureProducts().SingleOrDefault(p => p.ProductId == productId);
+        return product is null ? NotFound() : View("~/Views/Home/ProductDetails.cshtml", product);
+    }
+
+    private static Mango.Web.Models.ProductDto[] fixtureProducts() => new[] {
             new Mango.Web.Models.ProductDto { ProductId=1, Name="Samosa", Description="Sample starter from the fixture catalog.", Price=5, CategoryName="Starter", ImageUrl="/fixture-products/1.jpg" },
             new Mango.Web.Models.ProductDto { ProductId=2, Name="Paneer Tikka", Description="Sample main dish from the fixture catalog.", Price=12.5, CategoryName="Main", ImageUrl="/fixture-products/4.jpg" },
             new Mango.Web.Models.ProductDto { ProductId=3, Name="Dessert", Description="Sample dessert from the fixture catalog.", Price=7.5, CategoryName="Dessert", ImageUrl="/fixture-products/5.jpg" }
-        });
+        };
 }
 
 public sealed class PreviewControllers : IApplicationFeatureProvider<ControllerFeature>

@@ -4,7 +4,9 @@ An educational .NET microservices application for an e-commerce workflow, combin
 
 ## Visual preview
 
-![Read-only fixture preview with sample data](docs/screenshots/fixture-preview.png)
+<a href="docs/PREVIEW.md#visual-tour"><picture><source type="image/webp" srcset="docs/screenshots/ui-tour.webp" /><img src="docs/screenshots/ui-tour.gif" width="100%" alt="Captured UI tour with sample data" /></picture></a>
+
+9.8-second captured UI sequence · Sample data · [GIF](docs/screenshots/ui-tour.gif) · [Static screenshot](docs/screenshots/fixture-preview.png).
 
 [Run the read-only preview](docs/PREVIEW.md) to inspect the existing Razor views with sample data. It requires no database or payment credentials.
 

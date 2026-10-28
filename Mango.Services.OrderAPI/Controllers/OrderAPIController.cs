@@ -1,4 +1,4 @@
-using AutoMapper;
+using Mango.Services.OrderAPI;
 using Mango.MessageBus;
 using Mango.Services.OrderAPI.Data;
 using Mango.Services.OrderAPI.Models;
@@ -21,13 +21,13 @@ namespace Mango.Services.OrderAPI.Controllers
     public class OrderAPIController : ControllerBase
     {
         protected ResponseDto _response;
-        private IMapper _mapper;
+        private MappingConfig _mapper;
         private readonly AppDbContext _db;
         private IProductService _productService;
         private readonly ICouponService _couponService;
         private readonly IMessageBus _messageBus;
         private readonly IConfiguration _configuration;
-        public OrderAPIController(AppDbContext db, IProductService productService, IMapper mapper, 
+        public OrderAPIController(AppDbContext db, IProductService productService, MappingConfig mapper,
                                   IConfiguration configuration, IMessageBus messageBus, ICouponService couponService)
         {
             _db = db;
@@ -57,7 +57,7 @@ namespace Mango.Services.OrderAPI.Controllers
                 {
                     objList = _db.OrderHeaders.Include(u => u.OrderDetails).Where(u => u.UserId == currentUserId).OrderByDescending(u => u.OrderHeaderId).ToList();
                 }
-                _response.Result = _mapper.Map<IEnumerable<OrderHeaderDto>>(objList);
+                _response.Result = _mapper.ToOrderHeaderDtoList(objList);
             }
             catch (Exception ex)
             {
@@ -78,7 +78,7 @@ namespace Mango.Services.OrderAPI.Controllers
                 OrderHeader? orderHeader = _db.OrderHeaders.Include(u => u.OrderDetails).FirstOrDefault(u => u.OrderHeaderId == id);
                 if (orderHeader == null) return NotFound();
                 if (!User.IsInRole(SD.RoleAdmin) && orderHeader.UserId != currentUserId) return Forbid();
-                _response.Result = _mapper.Map<OrderHeaderDto>(orderHeader);
+                _response.Result = _mapper.ToOrderHeaderDto(orderHeader);
             }
             catch (Exception ex)
             {
@@ -139,7 +139,7 @@ namespace Mango.Services.OrderAPI.Controllers
                 };
                 _db.OrderHeaders.Add(orderCreated);
                 await _db.SaveChangesAsync();
-                _response.Result = _mapper.Map<OrderHeaderDto>(orderCreated);
+                _response.Result = _mapper.ToOrderHeaderDto(orderCreated);
             }
             catch (Exception)
             {
@@ -175,7 +175,7 @@ namespace Mango.Services.OrderAPI.Controllers
                         || existing.ClientReferenceId != orderHeader.OrderHeaderId.ToString(System.Globalization.CultureInfo.InvariantCulture)
                         || string.IsNullOrWhiteSpace(existing.Url))
                         return failure("An existing checkout must be resolved before starting another payment.", 409);
-                    stripeRequestDto.OrderHeader = _mapper.Map<OrderHeaderDto>(orderHeader);
+                    stripeRequestDto.OrderHeader = _mapper.ToOrderHeaderDto(orderHeader);
                     stripeRequestDto.StripeSessionId = existing.Id;
                     stripeRequestDto.StripeSessionUrl = existing.Url;
                     _response.Result = stripeRequestDto;
@@ -209,7 +209,7 @@ namespace Mango.Services.OrderAPI.Controllers
                     return failure("Payment service returned an incomplete session.", 503);
                 orderHeader.StripeSessionId = session.Id;
                 await _db.SaveChangesAsync();
-                stripeRequestDto.OrderHeader = _mapper.Map<OrderHeaderDto>(orderHeader);
+                stripeRequestDto.OrderHeader = _mapper.ToOrderHeaderDto(orderHeader);
                 stripeRequestDto.StripeSessionId = session.Id;
                 stripeRequestDto.StripeSessionUrl = session.Url;
                 _response.Result = stripeRequestDto;
@@ -236,7 +236,7 @@ namespace Mango.Services.OrderAPI.Controllers
                 if (orderHeader.Status == SD.Status_Approved || orderHeader.Status == SD.Status_ReadyForPickup
                     || orderHeader.Status == SD.Status_Completed)
                 {
-                    _response.Result = _mapper.Map<OrderHeaderDto>(orderHeader);
+                    _response.Result = _mapper.ToOrderHeaderDto(orderHeader);
                     return _response;
                 }
                 if (orderHeader.Status != SD.Status_Pending || string.IsNullOrWhiteSpace(orderHeader.StripeSessionId))
@@ -258,7 +258,7 @@ namespace Mango.Services.OrderAPI.Controllers
                     RewardsActivity = Convert.ToInt32(orderHeader.OrderTotal), UserId = orderHeader.UserId };
                 await _messageBus.PublishMessage(rewardsDto,
                     _configuration.GetValue<string>("TopicAndQueueNames:OrderCreatedTopic"));
-                _response.Result = _mapper.Map<OrderHeaderDto>(orderHeader);
+                _response.Result = _mapper.ToOrderHeaderDto(orderHeader);
             }
             catch (Exception)
             {

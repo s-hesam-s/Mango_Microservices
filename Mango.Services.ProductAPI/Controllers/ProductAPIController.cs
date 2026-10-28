@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using Mango.Services.ProductAPI;
 using Mango.Services.ProductAPI.Security;
 using Mango.Services.ProductAPI.Data;
 using Mango.Services.ProductAPI.Models;
@@ -16,9 +16,9 @@ namespace Mango.Services.ProductAPI.Controllers
     {
         private readonly AppDbContext _db;
         private ResponseDto _response;
-        private IMapper _mapper;
+        private MappingConfig _mapper;
 
-        public ProductAPIController(AppDbContext db, IMapper mapper)
+        public ProductAPIController(AppDbContext db, MappingConfig mapper)
         {
             _db = db;
             _mapper = mapper;
@@ -31,7 +31,7 @@ namespace Mango.Services.ProductAPI.Controllers
             try
             {
                 IEnumerable<Product> objList = _db.Products.ToList();
-                _response.Result = _mapper.Map<IEnumerable<ProductDto>>(objList);
+                _response.Result = _mapper.ToProductDtoList(objList);
             }
             catch (Exception)
             {
@@ -48,7 +48,7 @@ namespace Mango.Services.ProductAPI.Controllers
             try
             {
                 Product obj = _db.Products.First(u => u.ProductId == id);
-                _response.Result = _mapper.Map<ProductDto>(obj);
+                _response.Result = _mapper.ToProductDto(obj);
             }
             catch (Exception)
             {
@@ -64,7 +64,7 @@ namespace Mango.Services.ProductAPI.Controllers
         {
             try
             {
-                Product product = _mapper.Map<Product>(ProductDto);
+                Product product = _mapper.ToProduct(ProductDto);
                 product.ProductId = 0;
                 var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
                 var imagePath = ProductDto.Image == null ? null : ProductImageStorage.Save(ProductDto.Image, webRoot);
@@ -78,7 +78,7 @@ namespace Mango.Services.ProductAPI.Controllers
                     throw;
                 }
 
-                _response.Result = _mapper.Map<ProductDto>(product);
+                _response.Result = _mapper.ToProductDto(product);
             }
             catch (Exception)
             {
@@ -97,7 +97,7 @@ namespace Mango.Services.ProductAPI.Controllers
             {
                 var stored = _db.Products.AsNoTracking().FirstOrDefault(p => p.ProductId == ProductDto.ProductId);
                 if (stored == null) { _response.IsSuccess = false; _response.Message = "Product not found."; return _response; }
-                Product product = _mapper.Map<Product>(ProductDto);
+                Product product = _mapper.ToProduct(ProductDto);
                 product.ImageLocalPath = stored.ImageLocalPath;
                 product.ImageUrl = stored.ImageUrl;
                 var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
@@ -119,7 +119,7 @@ namespace Mango.Services.ProductAPI.Controllers
                     catch (Exception error) when (error is IOException or UnauthorizedAccessException) { /* The saved product is retained if old-image cleanup fails. */ }
                 }
 
-                _response.Result = _mapper.Map<ProductDto>(product);
+                _response.Result = _mapper.ToProductDto(product);
             }
             catch (Exception)
             {

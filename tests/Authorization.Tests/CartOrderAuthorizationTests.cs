@@ -315,10 +315,10 @@ public class CartOrderAuthorizationTests : IDisposable
             services.AddControllers().AddApplicationPart(typeof(CartAPIController).Assembly)
                 .AddApplicationPart(typeof(OrderAPIController).Assembly).AddControllersAsServices();
             services.AddTransient(_ => new CartAPIController(_cart,
-                Mango.Services.ShoppingCartAPI.MappingConfig.RegisterMaps().CreateMapper(), products.Object,
+                new Mango.Services.ShoppingCartAPI.MappingConfig(), products.Object,
                 new Mock<CouponService>().Object, _bus.Object, config));
             services.AddTransient(_ => new OrderAPIController(_orders, orderProducts.Object,
-                Mango.Services.OrderAPI.MappingConfig.RegisterMaps().CreateMapper(), config, _bus.Object,
+                new Mango.Services.OrderAPI.MappingConfig(), config, _bus.Object,
                 orderCoupons.Object));
             services.AddAuthentication("Bearer").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Bearer", _ => { });
             services.AddAuthorization();

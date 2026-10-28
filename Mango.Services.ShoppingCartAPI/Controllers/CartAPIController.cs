@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using Mango.Services.ShoppingCartAPI;
 using Mango.MessageBus;
 using Mango.Services.ShoppingCartAPI.Data;
 using Mango.Services.ShoppingCartAPI.Models;
@@ -17,14 +17,14 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
     public class CartAPIController : ControllerBase
     {
         private ResponseDto _response;
-        private IMapper _mapper;
+        private MappingConfig _mapper;
         private readonly AppDbContext _db;
         private IProductService _productService;
         private ICouponService _couponService;
         private IConfiguration _configuration;
         private readonly IMessageBus _messageBus;
         public CartAPIController(AppDbContext db,
-            IMapper mapper, IProductService productService, ICouponService couponService, IMessageBus messageBus, IConfiguration configuration)
+            MappingConfig mapper, IProductService productService, ICouponService couponService, IMessageBus messageBus, IConfiguration configuration)
         {
             _db = db;
             _productService = productService;
@@ -45,9 +45,9 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
                 if (header == null) return NotFound();
                 CartDto cart = new()
                 {
-                    CartHeader = _mapper.Map<CartHeaderDto>(header)
+                    CartHeader = _mapper.ToCartHeaderDto(header)
                 };
-                cart.CartDetails = _mapper.Map<IEnumerable<CartDetailsDto>>(_db.CartDetails
+                cart.CartDetails = _mapper.ToCartDetailsDtoList(_db.CartDetails
                     .Where(u => u.CartHeaderId == cart.CartHeader.CartHeaderId));
 
                 IEnumerable<ProductDto> productDtos = await _productService.GetProducts();
@@ -128,14 +128,14 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
                 if (cartHeaderFromDb == null)
                 {
                     //create header and details
-                    CartHeader cartHeader = _mapper.Map<CartHeader>(cartDto.CartHeader);
+                    CartHeader cartHeader = _mapper.ToCartHeader(cartDto.CartHeader);
                     cartHeader.CartHeaderId = 0;
                     _db.CartHeaders.Add(cartHeader);
                     await _db.SaveChangesAsync();
                     cartDto.CartHeader.CartHeaderId = cartHeader.CartHeaderId;
                     item.CartHeaderId = cartHeader.CartHeaderId;
                     item.CartDetailsId = 0;
-                    _db.CartDetails.Add(_mapper.Map<CartDetails>(item));
+                    _db.CartDetails.Add(_mapper.ToCartDetails(item));
                     await _db.SaveChangesAsync();
                 }
                 else
@@ -151,7 +151,7 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
                         //create cartdetails
                         cartDto.CartDetails.First().CartHeaderId = cartHeaderFromDb.CartHeaderId;
                         cartDto.CartDetails.First().CartDetailsId = 0;
-                        _db.CartDetails.Add(_mapper.Map<CartDetails>(cartDto.CartDetails.First()));
+                        _db.CartDetails.Add(_mapper.ToCartDetails(cartDto.CartDetails.First()));
                         await _db.SaveChangesAsync();
                     }
                     else
@@ -162,7 +162,7 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
                         cartDto.CartDetails.First().Count += cartDetailsFromDb.Count;
                         cartDto.CartDetails.First().CartHeaderId = cartDetailsFromDb.CartHeaderId;
                         cartDto.CartDetails.First().CartDetailsId = cartDetailsFromDb.CartDetailsId;
-                        _db.CartDetails.Update(_mapper.Map<CartDetails>(cartDto.CartDetails.First()));
+                        _db.CartDetails.Update(_mapper.ToCartDetails(cartDto.CartDetails.First()));
                         await _db.SaveChangesAsync();
                     }
                 }

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using Mango.Services.CouponAPI;
 using Mango.Services.CouponAPI.Data;
 using Mango.Services.CouponAPI.Models;
 using Mango.Services.CouponAPI.Models.Dto;
@@ -14,9 +14,9 @@ namespace Mango.Services.CouponAPI.Controllers
     {
         private readonly AppDbContext _db;
         private ResponseDto _response;
-        private IMapper _mapper;
+        private MappingConfig _mapper;
 
-        public CouponAPIController(AppDbContext db, IMapper mapper)
+        public CouponAPIController(AppDbContext db, MappingConfig mapper)
         {
             _db = db;
             _mapper = mapper;
@@ -29,7 +29,7 @@ namespace Mango.Services.CouponAPI.Controllers
             try
             {
                 IEnumerable<Coupon> objList = _db.Coupons.ToList();
-                _response.Result = _mapper.Map<IEnumerable<CouponDto>>(objList);
+                _response.Result = _mapper.ToCouponDtoList(objList);
             }
             catch (Exception ex)
             {
@@ -46,7 +46,7 @@ namespace Mango.Services.CouponAPI.Controllers
             try
             {
                 Coupon obj = _db.Coupons.First(u => u.CouponId == id);
-                _response.Result = _mapper.Map<CouponDto>(obj);
+                _response.Result = _mapper.ToCouponDto(obj);
             }
             catch (Exception ex)
             {
@@ -63,7 +63,7 @@ namespace Mango.Services.CouponAPI.Controllers
             try
             {
                 Coupon obj = _db.Coupons.First(u => u.CouponCode.ToLower() == code.ToLower());
-                _response.Result = _mapper.Map<CouponDto>(obj);
+                _response.Result = _mapper.ToCouponDto(obj);
             }
             catch (Exception ex)
             {
@@ -79,7 +79,7 @@ namespace Mango.Services.CouponAPI.Controllers
         {
             try
             {
-                Coupon obj = _mapper.Map<Coupon>(couponDto);
+                Coupon obj = _mapper.ToCoupon(couponDto);
                 _db.Coupons.Add(obj);
                 _db.SaveChanges();
 
@@ -93,7 +93,7 @@ namespace Mango.Services.CouponAPI.Controllers
                 var service = new Stripe.CouponService();
                 service.Create(options);
 
-                _response.Result = _mapper.Map<CouponDto>(obj);
+                _response.Result = _mapper.ToCouponDto(obj);
             }
             catch (Exception ex)
             {
@@ -110,11 +110,11 @@ namespace Mango.Services.CouponAPI.Controllers
         {
             try
             {
-                Coupon obj = _mapper.Map<Coupon>(couponDto);
+                Coupon obj = _mapper.ToCoupon(couponDto);
                 _db.Coupons.Update(obj);
                 _db.SaveChanges();
 
-                _response.Result = _mapper.Map<CouponDto>(obj);
+                _response.Result = _mapper.ToCouponDto(obj);
             }
             catch (Exception ex)
             {

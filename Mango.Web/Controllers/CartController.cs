@@ -79,7 +79,23 @@ namespace Mango.Web.Controllers
             }
         }
 
+        [HttpGet]
         public async Task<IActionResult> Confirmation(int orderId)
+        {
+            try
+            {
+                var order = readResult<OrderHeaderDto>(await _orderService.GetOrder(orderId));
+                if (order?.OrderHeaderId == orderId && (order.Status == SD.Status_Approved ||
+                    order.Status == SD.Status_ReadyForPickup || order.Status == SD.Status_Completed)) return View(orderId);
+                ViewData["CanVerify"] = order?.OrderHeaderId == orderId && order.Status == SD.Status_Pending;
+            }
+            catch (Exception) { }
+            ViewData["PaymentError"] = "Review and verify payment before confirming this order.";
+            return View(orderId);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyPayment(int orderId)
         {
             try
             {
@@ -87,13 +103,14 @@ namespace Mango.Web.Controllers
                 var order = readResult<OrderHeaderDto>(response);
                 if (order?.OrderHeaderId == orderId && (order.Status == SD.Status_Approved
                     || order.Status == SD.Status_ReadyForPickup || order.Status == SD.Status_Completed))
-                    return View(orderId);
+                    return View("Confirmation", orderId);
             }
             catch (Exception) { }
             ViewData["PaymentError"] = "Payment could not be confirmed. Check your order status before retrying.";
             return View("Confirmation", orderId);
         }
 
+        [HttpPost]
         public async Task<IActionResult> Remove(int cartDetailsId)
         {
             var userId = User.Claims.Where(u => u.Type == JwtRegisteredClaimNames.Sub)?.FirstOrDefault()?.Value;

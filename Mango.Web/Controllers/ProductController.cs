@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 namespace Mango.Web.Controllers
 {
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = Mango.Web.Utility.SD.RoleAdmin)]
     public class ProductController : Controller
     {
         private readonly IProductService _productService;

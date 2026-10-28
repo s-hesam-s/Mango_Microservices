@@ -103,3 +103,7 @@ This is an educational repository. The implementation notes describe the code in
 GitHub Actions restores and builds `Mango.sln` in Release mode on Windows using the existing .NET 8 target. It also runs `scripts/Test-PublicConfiguration.ps1` without printing configured values. The existing authorization regressions run with mocked dependencies and in-memory HTTP hosts where applicable. The application hosts, database migrations/seeds, cloud integrations and payments are not started by CI.
 
 The [CI workflow](.github/workflows/ci.yml) runs for pull requests and pushes to `master`, and can be started manually. It uses read-only repository permissions and does not deploy the project.
+
+## Security and regression boundaries
+
+See [implemented controls and verification limits](docs/SECURITY-BOUNDARIES.md) for browser, input and payment/token boundaries. Passing isolated tests does not certify deployed integration or production readiness.

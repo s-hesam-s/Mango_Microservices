@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Mango.Web.Controllers;
 using Mango.Web.Models;
 using Mango.Web.Service.IService;
@@ -50,7 +50,7 @@ public class CheckoutFailureTests
             _ => new ResponseDto { Result = new OrderHeaderDto { OrderHeaderId = failure == "wrongOrder" ? 200 : 100, Status = "Pending" } }
         });
         if (failure == "throws") orders.Setup(s => s.ValidateStripeSession(100)).ThrowsAsync(new HttpRequestException("fixture"));
-        var result = Assert.IsType<ViewResult>(await controller.Confirmation(100));
+        var result = Assert.IsType<ViewResult>(await controller.VerifyPayment(100));
         Assert.Equal("Confirmation", result.ViewName); Assert.NotNull(controller.ViewData["PaymentError"]);
     }
 
@@ -60,7 +60,21 @@ public class CheckoutFailureTests
     {
         var (controller, _, orders) = fixture();
         orders.Setup(s => s.ValidateStripeSession(100)).ReturnsAsync(new ResponseDto { Result = new OrderHeaderDto { OrderHeaderId = 100, Status = status } });
-        Assert.IsType<ViewResult>(await controller.Confirmation(100)); Assert.Null(controller.ViewData["PaymentError"]);
+        Assert.IsType<ViewResult>(await controller.VerifyPayment(100)); Assert.Null(controller.ViewData["PaymentError"]);
+    }
+
+    [Theory]
+    [InlineData("Pending", false)]
+    [InlineData("Approved", true)]
+    [InlineData("Cancelled", false)]
+    public async Task GetConfirmationOnlyReadsTheStoredOrder(string status, bool confirmed)
+    {
+        var (controller, _, orders) = fixture();
+        orders.Setup(s => s.GetOrder(100)).ReturnsAsync(new ResponseDto
+        { Result = new OrderHeaderDto { OrderHeaderId = 100, Status = status } });
+        Assert.IsType<ViewResult>(await controller.Confirmation(100));
+        Assert.Equal(confirmed, controller.ViewData["PaymentError"] == null);
+        orders.Verify(s => s.ValidateStripeSession(It.IsAny<int>()), Times.Never);
     }
 
     private static ResponseDto response(string failure)

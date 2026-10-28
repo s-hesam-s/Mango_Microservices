@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+Mango.Web.Configuration.MvcConfiguration.AddSecureMvc(builder.Services);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();

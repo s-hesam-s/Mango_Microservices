@@ -18,7 +18,7 @@ Tests retain the existing cart/order/registration regressions and add in-process
 
 The previous payment limitations remain: reward publication after stored approval has no durable outbox/reconciliation record, SQL concurrency/exactly-once processing is not proven, accepted pending refunds are not tracked to final settlement, and free-order fulfillment is not implemented. Webhook fulfillment and live Stripe/message-bus integration are not supplied by this browser/catalog change. Do not claim production payment guarantees from passing isolated tests.
 
-No original host, real database migration, live payment, email or message broker was run. Runtime and dependency advisory remediation remain a separate change group.
+No original host, real database migration, live payment, email or message broker was run. The .NET 10 migration and dependency remediation are recorded in [RUNTIME.md](RUNTIME.md); they do not establish deployed runtime readiness.
 
 Order-table contact fields use the DataTables text renderer; customer-provided strings are not rendered as trusted HTML.
 

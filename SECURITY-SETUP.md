@@ -49,7 +49,7 @@ Historical commits may still contain previous training values. If a value was ev
 
 ## Regression tests
 
-Run `dotnet test tests/Authorization.Tests/Authorization.Tests.csproj`. The tests replace Identity managers with mocks and never start the application or connect to a database, payment provider or messaging service.
+Run `dotnet test tests/Authorization.Tests/Authorization.Tests.csproj`. Tests use mocked Identity managers, isolated EF in-memory stores, controller HTTP hosts and strict mocked Stripe clients. They never start the real application, SQL initialization, payment provider or messaging service.
 
 Run `pwsh -File scripts/Test-PublicConfiguration.ps1` to check public configuration without displaying values.
 
@@ -71,6 +71,28 @@ Successful responses retain the ResponseDto JSON envelope and existing route nam
 
 The authorization regression suite hosts controllers in TestServer with separate EF Core in-memory stores. It checks anonymous callers, missing subjects, mapped/raw subject claims, owners, other customers, administrators, forged record keys and nested navigation data. Database state and message publication are asserted, and a strict mocked Stripe client prevents real payment requests if an authorization regression occurs. The real application Program, SQL migration/seed routines, Stripe and Service Bus are not started by these tests. The additional in-memory provider is test-only and matches the existing EF Core 9.0.4 dependency.
 
-This change enforces caller identity and access. Existing pricing and payment workflow semantics remain outside these regressions; live Stripe/refund interoperability is not established by a passing authorization suite.
+## Cart pricing and order workflow
+
+Order creation obtains product names and unit prices from Product API and coupon terms from Coupon API. It ignores client-supplied totals, discounts, product snapshots and record identifiers. Order API settings now include the same sample Coupon API address as ShoppingCart API. Override `ServiceUrls__CouponAPI` for your local deployment as needed; the new named client forwards the authenticated bearer token using the existing backend handler. No external service is invoked by the tests.
+
+Unit prices and discounts are rounded to two decimal places with MidpointRounding.AwayFromZero using decimal arithmetic, then stored in the existing double columns. No schema or migration change is required. A coupon is eligible when subtotal is **at least** MinAmount; its discount is capped at subtotal. Invalid coupons reject order creation. A missing/invalid coupon on cart display does not create a discount; unavailable product/coupon HTTP services fail pricing instead of silently producing a successful zero total. Invalid upstream prices or negative coupon terms also fail pricing.
+
+CartUpsert accepts exactly one product with a positive quantity per request, matching the MVC add-to-cart flow; multi-item payloads and integer overflow are rejected. CreateOrder requires a nonempty set of distinct product IDs with positive quantities. Payment sessions use persisted order lines and the persisted discount, not a second client-supplied price list. A fixed-amount Stripe coupon represents the stored discount. Stripe amounts use integer cents and USD. Zero-total orders cannot start this payment flow; free-order fulfillment is not implemented.
+
+Only Pending orders can start checkout. An existing open/unpaid matching session is reused; paid, expired or mismatched sessions are rejected instead of creating another payment. New session, fixed-amount discount and refund requests use stable per-order Stripe idempotency keys. Provider idempotency retention and live refund behavior are not validated by these tests.
+
+| Current status | Allowed operational change |
+|---|---|
+| Approved | ReadyForPickup or Cancelled |
+| ReadyForPickup | Completed or Cancelled |
+| Pending, Completed, Cancelled, Refunded | No new operational transition |
+
+Repeating the same operational status is a no-op. Cancellation uses the stored payment intent; failed/exceptional refunds do not change order status. An accepted pending refund marks the order Cancelled; its eventual settlement is not tracked here. Unsupported target strings return 400, disallowed transitions/payment mismatches return 409, and pricing/payment dependency failures return 503 with failure envelopes.
+
+Payment confirmation checks the stored session ID, order reference, paid status, USD total and successful payment intent amount before approving a Pending order. Repeated sequential confirmation of Approved/ReadyForPickup/Completed returns the existing state without another Stripe read or reward message. Cancelled/Refunded orders cannot be reopened by confirmation. MVC Checkout validates service responses before reading results or redirecting, and failed confirmation displays an error instead of the success message.
+
+### Payment and messaging limitations
+
+Approval is saved before reward publication. If publication fails, confirmation returns 503 while the order may already be Approved; a subsequent confirmation does not automatically republish. Reward reconciliation requires operator review. There is no transactional outbox or exactly-once guarantee. Concurrent confirmations/status requests are not serialized and the in-memory suite does not establish SQL concurrency or distributed transaction behavior. A process/database failure after a successful Stripe operation still requires reconciliation; Stripe keys help retries within the provider's retention period but do not provide a cross-system transaction. Passing tests do not establish live Stripe/refund interoperability or production readiness.
 
 The Auth, Order and ShoppingCart applications also publish messages through Mango.MessageBus. Each host reads ServiceBusConnectionString from its own configuration (environment variable: ServiceBusConnectionString). No connection string is embedded in the shared library.

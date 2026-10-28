@@ -15,14 +15,15 @@ namespace Mango.Services.ShoppingCartAPI.Service
         public async Task<IEnumerable<ProductDto>> GetProducts()
         {
             var client = _httpClientFactory.CreateClient("Product");
-            var response = await client.GetAsync($"/api/product");
+            using var response = await client.GetAsync($"/api/product");
+            response.EnsureSuccessStatusCode();
             var apiContet = await response.Content.ReadAsStringAsync();
             var resp = JsonConvert.DeserializeObject<ResponseDto>(apiContet);
-            if (resp.IsSuccess)
+            if (resp != null && resp.IsSuccess && resp.Result != null)
             {
                 return JsonConvert.DeserializeObject<IEnumerable<ProductDto>>(Convert.ToString(resp.Result));
             }
-            return new List<ProductDto>();
+            throw new HttpRequestException("Product service could not provide the catalog.");
         }
     }
 }

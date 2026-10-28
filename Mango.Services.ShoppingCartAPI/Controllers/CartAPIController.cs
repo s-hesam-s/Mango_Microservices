@@ -52,29 +52,38 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
 
                 IEnumerable<ProductDto> productDtos = await _productService.GetProducts();
 
+                decimal subtotal = 0;
                 foreach (var item in cart.CartDetails)
                 {
                     item.Product = productDtos.FirstOrDefault(u => u.ProductId == item.ProductId);
-                    cart.CartHeader.CartTotal += (item.Count * item.Product.Price);
+                    if (item.Product == null || item.Count <= 0 || !double.IsFinite(item.Product.Price) || item.Product.Price < 0)
+                        return failure("A cart product is unavailable or invalid.", StatusCodes.Status409Conflict);
+                    var price = decimal.Round((decimal)item.Product.Price, 2, MidpointRounding.AwayFromZero);
+                    item.Product.Price = (double)price;
+                    subtotal = checked(subtotal + item.Count * price);
                 }
+                decimal discount = 0;
 
                 //apply coupon if any
                 if (!string.IsNullOrEmpty(cart.CartHeader.CouponCode))
                 {
                     CouponDto coupon = await _couponService.GetCoupon(cart.CartHeader.CouponCode);
-                    if (coupon != null && cart.CartHeader.CartTotal > coupon.MinAmount)
+                    if (coupon != null && !string.IsNullOrWhiteSpace(coupon.CouponCode))
                     {
-                        cart.CartHeader.CartTotal -= coupon.DiscountAmount;
-                        cart.CartHeader.Discount = coupon.DiscountAmount;
+                        if (!double.IsFinite(coupon.DiscountAmount) || coupon.DiscountAmount < 0 || coupon.MinAmount < 0)
+                            return failure("Coupon service returned invalid pricing.", StatusCodes.Status503ServiceUnavailable);
+                        if (subtotal >= coupon.MinAmount)
+                            discount = Math.Min(subtotal, decimal.Round((decimal)coupon.DiscountAmount, 2, MidpointRounding.AwayFromZero));
                     }
                 }
+                cart.CartHeader.Discount = (double)discount;
+                cart.CartHeader.CartTotal = (double)(subtotal - discount);
 
                 _response.Result = cart;
             }
             catch (Exception ex)
             {
-                _response.IsSuccess = false;
-                _response.Message = ex.Message;
+                return failure("Cart pricing is temporarily unavailable.", StatusCodes.Status503ServiceUnavailable);
             }
             return _response;
         }
@@ -107,8 +116,10 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         {
             var denial = bindCartOwner(cartDto);
             if (denial != null) return denial;
-            var item = cartDto.CartDetails?.FirstOrDefault();
-            if (item == null) return BadRequest();
+            var items = cartDto.CartDetails?.ToList();
+            if (items?.Count != 1 || items[0] == null || items[0].Count <= 0 || items[0].ProductId <= 0)
+                return BadRequest(new ResponseDto { IsSuccess = false, Message = "Submit one product with a positive quantity." });
+            var item = items[0];
             item.CartHeader = null;
             try
             {
@@ -146,6 +157,8 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
                     else
                     {
                         //update count in cart details
+                        if (cartDetailsFromDb.Count < 0 || item.Count > int.MaxValue - cartDetailsFromDb.Count)
+                            return BadRequest(new ResponseDto { IsSuccess = false, Message = "Cart quantity is too large." });
                         cartDto.CartDetails.First().Count += cartDetailsFromDb.Count;
                         cartDto.CartDetails.First().CartHeaderId = cartDetailsFromDb.CartHeaderId;
                         cartDto.CartDetails.First().CartDetailsId = cartDetailsFromDb.CartDetailsId;
@@ -222,6 +235,11 @@ namespace Mango.Services.ShoppingCartAPI.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
             return string.IsNullOrWhiteSpace(userId) ? null : userId;
+        }
+
+        private ObjectResult failure(string message, int statusCode)
+        {
+            return StatusCode(statusCode, new ResponseDto { IsSuccess = false, Message = message });
         }
 
         private ActionResult? bindCartOwner(CartDto cartDto)

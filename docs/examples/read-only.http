@@ -1,0 +1,23 @@
+# Optional manual reads against already configured development hosts.
+# Start no services from this file. See ../WALKTHROUGH.md.
+# Replace placeholders locally; do not commit real tokens.
+@productApi = https://localhost:7000
+@cartApi = https://localhost:7003
+@orderApi = https://localhost:7004
+@accessToken = <local-customer-token>
+@subject = <subject-from-login>
+@orderId = <generated-order-id>
+
+### Catalog: inspect isSuccess and result, not just HTTP 200.
+GET {{productApi}}/api/product
+Accept: application/json
+
+### Own cart: missing resource 404; mismatched subject 403.
+GET {{cartApi}}/api/cart/GetCart/{{subject}}
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Own generated order.
+GET {{orderApi}}/api/order/GetOrder/{{orderId}}
+Authorization: Bearer {{accessToken}}
+Accept: application/json

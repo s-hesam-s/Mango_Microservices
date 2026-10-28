@@ -26,6 +26,10 @@ HTTPS addresses below come from the checked-in `https` launch profiles.
 | [Mango.Web](Mango.Web) | MVC storefront/client | 7047 |
 | [Mango.MessageBus](Mango.MessageBus) | Shared publisher library; not a separate host | — |
 
+## Technical walkthrough
+
+Follow the [source-backed walkthrough](docs/WALKTHROUGH.md) for isolated regression evidence, development prerequisites, sample requests and expected outcomes. The [architecture notes](docs/ARCHITECTURE.md) map the implementation and its tradeoffs; [read-only HTTP examples](docs/examples/read-only.http) are provided for an already configured development environment. The manual scenario has not been executed as a live deployment.
+
 ## Requirements and configuration
 
 Use an SDK capable of targeting .NET 8, isolated SQL Server development databases and your own Azure Service Bus development namespace for messaging workflows. Stripe-dependent payment operations require separate development credentials. Package restore requires NuGet access.

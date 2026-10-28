@@ -26,7 +26,8 @@ namespace Mango.Web.Service
 
         public void SetToken(string token)
         {
-            _contextAccessor.HttpContext?.Response.Cookies.Append(SD.TokenCookie, token);
+            _contextAccessor.HttpContext?.Response.Cookies.Append(SD.TokenCookie, token, new CookieOptions
+            { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, Path = "/" });
         }
     }
 }

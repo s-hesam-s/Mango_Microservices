@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Mango.Services.ProductAPI/Mango.Services.ProductAPI.csproj" />
     <ProjectReference Include="../../Mango.Services.AuthAPI/Mango.Services.AuthAPI.csproj" />
     <ProjectReference Include="../../Mango.Web/Mango.Web.csproj" />
     <ProjectReference Include="../../Mango.Services.ShoppingCartAPI/Mango.Services.ShoppingCartAPI.csproj" />

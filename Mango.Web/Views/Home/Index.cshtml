@@ -14,7 +14,7 @@
                                 <span class="text-danger" style="font-size:20px;">@string.Format("{0:c}", product.Price)</span>
                                 <span class="badge bg-warning text-white p-2">@product.CategoryName</span>
                             </div>
-                            <p class="card-text">@Html.Raw(product.Description)</p>
+                            <p class="card-text">@product.Description</p>
                             <div class="row">
                                 <div class="col">
                                     <a asp-action="ProductDetails" asp-route-productId="@product.ProductId"

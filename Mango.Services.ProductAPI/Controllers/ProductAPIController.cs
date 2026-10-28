@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
+using Mango.Services.ProductAPI.Security;
 using Mango.Services.ProductAPI.Data;
 using Mango.Services.ProductAPI.Models;
 using Mango.Services.ProductAPI.Models.Dto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Mango.Services.ProductAPI.Controllers
 {
@@ -31,10 +33,10 @@ namespace Mango.Services.ProductAPI.Controllers
                 IEnumerable<Product> objList = _db.Products.ToList();
                 _response.Result = _mapper.Map<IEnumerable<ProductDto>>(objList);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _response.IsSuccess = false;
-                _response.Message = ex.Message;
+                _response.Message = "The operation could not be completed.";
             }
             return _response;
         }
@@ -48,59 +50,40 @@ namespace Mango.Services.ProductAPI.Controllers
                 Product obj = _db.Products.First(u => u.ProductId == id);
                 _response.Result = _mapper.Map<ProductDto>(obj);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _response.IsSuccess = false;
-                _response.Message = ex.Message;
+                _response.Message = "The operation could not be completed.";
             }
             return _response;
         }
 
         [HttpPost]
         [Authorize(Roles = "ADMIN")]
-        public ResponseDto Post(ProductDto ProductDto)
+        public ResponseDto Post([FromForm] ProductDto ProductDto)
         {
             try
             {
                 Product product = _mapper.Map<Product>(ProductDto);
-                _db.Products.Add(product);
-                _db.SaveChanges();
-
-                if (ProductDto.Image != null)
+                product.ProductId = 0;
+                var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                var imagePath = ProductDto.Image == null ? null : ProductImageStorage.Save(ProductDto.Image, webRoot);
+                product.ImageLocalPath = imagePath == null ? null : "wwwroot" + imagePath;
+                product.ImageUrl = imagePath == null ? "https://placehold.co/600x400" :
+                    $"{Request.Scheme}://{Request.Host}{Request.PathBase}" + imagePath;
+                try { _db.Products.Add(product); _db.SaveChanges(); }
+                catch
                 {
-                    string fileName = product.ProductId + Path.GetExtension(ProductDto.Image.FileName);
-                    string filePath = @"wwwroot\ProductImages\" + fileName;
-
-                    //I have added the if condition to remove the any image with same name if that exist in the folder by any change
-                    var directoryLocation = Path.Combine(Directory.GetCurrentDirectory(), filePath);
-                    FileInfo file = new FileInfo(directoryLocation);
-                    if (file.Exists)
-                    {
-                        file.Delete();
-                    }
-
-                    var filePathDirectory = Path.Combine(Directory.GetCurrentDirectory(), filePath);
-                    using (var fileStream = new FileStream(filePathDirectory, FileMode.Create))
-                    {
-                        ProductDto.Image.CopyTo(fileStream);
-                    }
-                    var baseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}{HttpContext.Request.PathBase.Value}";
-                    product.ImageUrl = baseUrl + "/ProductImages/" + fileName;
-                    product.ImageLocalPath = filePath;
+                    if (imagePath != null) ProductImageStorage.DeleteManaged(product.ImageLocalPath, webRoot);
+                    throw;
                 }
-                else
-                {
-                    product.ImageUrl = "https://placehold.co/600x400";
-                }
-                _db.Products.Update(product);
-                _db.SaveChanges();
 
                 _response.Result = _mapper.Map<ProductDto>(product);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _response.IsSuccess = false;
-                _response.Message = ex.Message;
+                _response.Message = "The operation could not be completed.";
             }
             return _response;
         }
@@ -108,45 +91,40 @@ namespace Mango.Services.ProductAPI.Controllers
 
         [HttpPut]
         [Authorize(Roles = "ADMIN")]
-        public ResponseDto Put(ProductDto ProductDto)
+        public ResponseDto Put([FromForm] ProductDto ProductDto)
         {
             try
             {
+                var stored = _db.Products.AsNoTracking().FirstOrDefault(p => p.ProductId == ProductDto.ProductId);
+                if (stored == null) { _response.IsSuccess = false; _response.Message = "Product not found."; return _response; }
                 Product product = _mapper.Map<Product>(ProductDto);
-
+                product.ImageLocalPath = stored.ImageLocalPath;
+                product.ImageUrl = stored.ImageUrl;
+                var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
                 if (ProductDto.Image != null)
                 {
-                    if (!string.IsNullOrEmpty(product.ImageLocalPath))
-                    {
-                        var oldFilePathDirectory = Path.Combine(Directory.GetCurrentDirectory(), product.ImageLocalPath);
-                        FileInfo file = new FileInfo(oldFilePathDirectory);
-                        if (file.Exists)
-                        {
-                            file.Delete();
-                        }
-                    }
-
-                    string fileName = product.ProductId + Path.GetExtension(ProductDto.Image.FileName);
-                    string filePath = @"wwwroot\ProductImages\" + fileName;
-                    var filePathDirectory = Path.Combine(Directory.GetCurrentDirectory(), filePath);
-                    using (var fileStream = new FileStream(filePathDirectory, FileMode.Create))
-                    {
-                        ProductDto.Image.CopyTo(fileStream);
-                    }
-                    var baseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}{HttpContext.Request.PathBase.Value}";
-                    product.ImageUrl = baseUrl + "/ProductImages/" + fileName;
-                    product.ImageLocalPath = filePath;
+                    var imagePath = ProductImageStorage.Save(ProductDto.Image, webRoot);
+                    product.ImageLocalPath = "wwwroot" + imagePath;
+                    product.ImageUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}" + imagePath;
                 }
-
-                _db.Products.Update(product);
-                _db.SaveChanges();
+                try { _db.Products.Update(product); _db.SaveChanges(); }
+                catch
+                {
+                    if (ProductDto.Image != null) ProductImageStorage.DeleteManaged(product.ImageLocalPath, webRoot);
+                    throw;
+                }
+                if (ProductDto.Image != null)
+                {
+                    try { ProductImageStorage.DeleteManaged(stored.ImageLocalPath, webRoot); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException) { /* The saved product is retained if old-image cleanup fails. */ }
+                }
 
                 _response.Result = _mapper.Map<ProductDto>(product);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _response.IsSuccess = false;
-                _response.Message = ex.Message;
+                _response.Message = "The operation could not be completed.";
             }
             return _response;
         }
@@ -159,22 +137,15 @@ namespace Mango.Services.ProductAPI.Controllers
             try
             {
                 Product obj = _db.Products.First(u => u.ProductId == id);
-                if (!string.IsNullOrEmpty(obj.ImageLocalPath))
-                {
-                    var oldFilePathDirectory = Path.Combine(Directory.GetCurrentDirectory(), obj.ImageLocalPath);
-                    FileInfo file = new FileInfo(oldFilePathDirectory);
-                    if (file.Exists)
-                    {
-                        file.Delete();
-                    }
-                }
                 _db.Products.Remove(obj);
                 _db.SaveChanges();
+                try { ProductImageStorage.DeleteManaged(obj.ImageLocalPath, Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { /* A committed deletion can leave an orphan image. */ }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _response.IsSuccess = false;
-                _response.Message = ex.Message;
+                _response.Message = "The operation could not be completed.";
             }
             return _response;
         }

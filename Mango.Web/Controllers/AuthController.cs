@@ -39,7 +39,7 @@ namespace Mango.Web.Controllers
                 LoginResponseDto loginResponseDto =
                     JsonConvert.DeserializeObject<LoginResponseDto>(Convert.ToString(responseDto.Result));
 
-                await SignInUser(loginResponseDto);
+                await signInUser(loginResponseDto);
                 _tokenProvider.SetToken(loginResponseDto.Token);
 
                 return RedirectToAction("Index", "Home");
@@ -89,6 +89,7 @@ namespace Mango.Web.Controllers
             return View(obj);
         }
 
+        [HttpPost]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync();
@@ -96,7 +97,7 @@ namespace Mango.Web.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        private async Task SignInUser(LoginResponseDto model)
+        private async Task signInUser(LoginResponseDto model)
         {
             var handler = new JwtSecurityTokenHandler();
 

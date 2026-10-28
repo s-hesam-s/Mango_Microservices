@@ -2,6 +2,13 @@
 @if (ViewData["PaymentError"] is string paymentError)
 {
     <div class="alert alert-warning" role="alert">@paymentError</div>
+    @if (ViewData["CanVerify"] is true)
+    {
+        <form method="post" asp-action="VerifyPayment">
+            <input type="hidden" name="orderId" value="@Model" />
+            <button type="submit" class="btn btn-success">Verify payment</button>
+        </form>
+    }
     <a asp-controller="Order" asp-action="OrderIndex" class="btn btn-primary">View orders</a>
 }
 else

@@ -26,10 +26,10 @@ function loadDataTable(status) {
         "ajax": { url: "/order/getall?status=" + status },
         "columns": [
             { data: 'orderHeaderId', "width": "5%" },
-            { data: 'email', "width": "25%" },
-            { data: 'name', "width": "20%" },
-            { data: 'phone', "width": "10%" },
-            { data: 'status', "width": "10%" },
+            { data: 'email', render: $.fn.dataTable.render.text(), "width": "25%" },
+            { data: 'name', render: $.fn.dataTable.render.text(), "width": "20%" },
+            { data: 'phone', render: $.fn.dataTable.render.text(), "width": "10%" },
+            { data: 'status', render: $.fn.dataTable.render.text(), "width": "10%" },
             { data: 'orderTotal', "width": "10%" },
             {
                 data: 'orderHeaderId',

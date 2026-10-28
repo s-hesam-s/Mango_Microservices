@@ -66,7 +66,7 @@
                                 <a class="nav-link " href="#">Hello @User.Identity.Name</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link " asp-controller="Auth" asp-action="Logout">Logout</a>
+                                <form method="post" asp-controller="Auth" asp-action="Logout"><button type="submit" class="nav-link  btn btn-link">Logout</button></form>
                             </li>
                         }
                     </ul>

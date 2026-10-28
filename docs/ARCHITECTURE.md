@@ -61,4 +61,4 @@ Repeated sequential confirmation of an already paid operational state returns th
 
 Approval is saved before reward publication; a failed publication needs reconciliation. There is no transactional outbox or exactly-once guarantee, and concurrent requests are not serialized. Accepted pending refunds are not followed through settlement. Zero-total orders cannot start the current payment flow. The in-memory suite does not establish SQL concurrency or live Stripe interoperability.
 
-These limits, rounding/coupon rules and HTTP failures are specified in [SECURITY-SETUP.md](../SECURITY-SETUP.md#cart-pricing-and-order-workflow). Runtime/package modernization is separate work.
+These limits, rounding/coupon rules and HTTP failures are specified in [SECURITY-SETUP.md](../SECURITY-SETUP.md#cart-pricing-and-order-workflow). The source now targets .NET 10 and uses explicit mappings; see [runtime and dependency notes](RUNTIME.md) for versions and verification limits.
